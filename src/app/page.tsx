@@ -735,9 +735,15 @@ export default function EnterprisePortal() {
     dailyProduction: string;
     purpose?: LivestockPurpose;
     costPerHead?: number;
+    transportationCost?: number;
+    feedingCost?: number;
+    medicationCost?: number;
   }) => {
     const costPerHead = data.costPerHead || 0;
     const purpose: LivestockPurpose = data.purpose || 'GENERAL';
+    const addTransport = data.transportationCost || 0;
+    const addFeed = data.feedingCost || 0;
+    const addMed = data.medicationCost || 0;
 
     const newBatch: LivestockBatch = {
       id: `BATCH-${data.section.slice(0, 3)}-${Date.now().toString().slice(-3)}`,
@@ -771,11 +777,14 @@ export default function EnterprisePortal() {
         const row = prev[matchIndex];
         const newLiveCount = row.liveCount + data.headCount;
         const newCostPerHead = costPerHead > 0 ? costPerHead : row.costPerHead;
+        const newTransport = (row.transportationCost || 0) + addTransport;
+        const newFeed = (row.feedingCost || 0) + addFeed;
+        const newMed = (row.medicationCost || 0) + addMed;
         const totalExpenses =
           (newLiveCount + row.casualties) * newCostPerHead +
-          row.transportationCost +
-          row.feedingCost +
-          row.medicationCost +
+          newTransport +
+          newFeed +
+          newMed +
           row.salaries +
           row.otherExpenses;
         const totalUnitCost = newLiveCount > 0 ? Math.round(totalExpenses / newLiveCount) : 0;
@@ -785,6 +794,9 @@ export default function EnterprisePortal() {
           ...row,
           liveCount: newLiveCount,
           costPerHead: newCostPerHead,
+          transportationCost: newTransport,
+          feedingCost: newFeed,
+          medicationCost: newMed,
           totalExpenses,
           totalUnitCost,
           netProfitLoss,
@@ -804,8 +816,8 @@ export default function EnterprisePortal() {
           WATERFOWL: { code: 'F', name: 'F. WATERFOWL UNIT (DUCKS & GEESE)' },
         };
         const unit = unitMap[data.section] || { code: 'A' as const, name: 'A. CATTLE UNIT' };
-        const totalExpenses = data.headCount * costPerHead;
-        const totalUnitCost = costPerHead;
+        const totalExpenses = (data.headCount * costPerHead) + addTransport + addFeed + addMed;
+        const totalUnitCost = data.headCount > 0 ? Math.round(totalExpenses / data.headCount) : costPerHead;
 
         const newRow: AnimalProductionLedgerRow = {
           id: `LEDGER-GEN-${Date.now().toString().slice(-4)}`,
@@ -817,9 +829,9 @@ export default function EnterprisePortal() {
           liveCount: data.headCount,
           casualties: 0,
           costPerHead,
-          transportationCost: 0,
-          feedingCost: 0,
-          medicationCost: 0,
+          transportationCost: addTransport,
+          feedingCost: addFeed,
+          medicationCost: addMed,
           salaries: 0,
           otherExpenses: 0,
           totalUnitCost,
@@ -831,6 +843,56 @@ export default function EnterprisePortal() {
       }
     });
 
+    // Auto-record central expenses for haulage, feed, and vet if allocated
+    if (addTransport > 0) {
+      setExpenses((prev) => [
+        {
+          id: `EXP-TRP-${Date.now().toString().slice(-4)}`,
+          date: new Date().toISOString().split('T')[0],
+          division: 'LIVESTOCK_FARM',
+          category: 'FUEL_LOGISTICS',
+          description: `Intake Haulage / Transportation: ${data.subType} (${data.headCount} head)`,
+          amount: addTransport,
+          vendorName: 'Livestock Transit Logistics',
+          receiptAttached: true,
+          loggedBy: `${currentRole} Field Agent`,
+        },
+        ...prev,
+      ]);
+    }
+    if (addFeed > 0) {
+      setExpenses((prev) => [
+        {
+          id: `EXP-FD-${Date.now().toString().slice(-4)}`,
+          date: new Date().toISOString().split('T')[0],
+          division: 'LIVESTOCK_FARM',
+          category: 'FEED_PURCHASE',
+          description: `Initial Feed Supply Allotment: ${data.subType}`,
+          amount: addFeed,
+          vendorName: 'Premier Feed Mills Ltd',
+          receiptAttached: true,
+          loggedBy: `${currentRole} Field Agent`,
+        },
+        ...prev,
+      ]);
+    }
+    if (addMed > 0) {
+      setExpenses((prev) => [
+        {
+          id: `EXP-MED-${Date.now().toString().slice(-4)}`,
+          date: new Date().toISOString().split('T')[0],
+          division: 'LIVESTOCK_FARM',
+          category: 'VET_SUPPLIES',
+          description: `Intake Vaccination & Prophylaxis: ${data.subType}`,
+          amount: addMed,
+          vendorName: 'Vet Care Pharmaceuticals Ltd',
+          receiptAttached: true,
+          loggedBy: `${currentRole} Vet Officer`,
+        },
+        ...prev,
+      ]);
+    }
+
     const auditEntry: AuditTrailEntry = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
       timestamp: new Date().toLocaleTimeString(),
@@ -838,13 +900,19 @@ export default function EnterprisePortal() {
       performedBy: `User (${currentRole})`,
       userId: `USR-${Date.now().toString().slice(-3)}`,
       roleLevel: currentRole,
-      details: `Registered ${data.headCount} head of ${data.subType} (${data.tagOrFlock}) to ${data.locationPen} at ₦${costPerHead.toLocaleString()}/head. Animal ledger synchronized.`,
+      details: `Registered ${data.headCount} ${data.subType} in ${data.locationPen}. Cost per head: ₦${costPerHead.toLocaleString()}. Transport: ₦${addTransport.toLocaleString()}, Feed: ₦${addFeed.toLocaleString()}, Meds: ₦${addMed.toLocaleString()}. Synced to L2/L3 ledger.`,
       ipAddress: '192.168.1.42 (Farm Terminal)',
       hash: `SHA256:${Math.random().toString(36).substring(2)}${Date.now()}`,
     };
     setAuditTrail((prev) => [auditEntry, ...prev]);
 
-    showToast(`✅ Registered ${data.headCount} head of ${data.subType}! Updated Flock Registry & Excel Ledger.`, 'success');
+    const totalOps = addTransport + addFeed + addMed;
+    showToast(
+      totalOps > 0
+        ? `✅ Intake registered! +${data.headCount} animals added. Transport (₦${addTransport.toLocaleString()}), Feed (₦${addFeed.toLocaleString()}), and Meds (₦${addMed.toLocaleString()}) updated across Level 2 and Level 3!`
+        : `✅ New livestock batch registered: +${data.headCount} head added to official inventory!`,
+      'success'
+    );
   };
 
   // 9. Stock-In Procurement Receipt

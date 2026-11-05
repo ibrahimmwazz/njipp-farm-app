@@ -130,6 +130,9 @@ interface ActionDrawerProps {
     dailyProduction: string;
     purpose?: LivestockPurpose;
     costPerHead?: number;
+    transportationCost?: number;
+    feedingCost?: number;
+    medicationCost?: number;
   }) => void;
   onStockInProcurement?: (data: {
     itemId: string;
@@ -262,6 +265,9 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
   const [regAgeCohort, setRegAgeCohort] = useState('18 to 24 Months');
   const [regWeightAvg, setRegWeightAvg] = useState<number>(320);
   const [regDailyProd, setRegDailyProd] = useState('Fattening Regime');
+  const [regTransportationCost, setRegTransportationCost] = useState<number>(0);
+  const [regFeedingCost, setRegFeedingCost] = useState<number>(0);
+  const [regMedicationCost, setRegMedicationCost] = useState<number>(0);
 
   // 10. Stock-In Procurement State
   const [stockItemKey, setStockItemKey] = useState(inventory[0]?.id || 'INV-01');
@@ -1387,6 +1393,9 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
                       dailyProduction: regDailyProd,
                       purpose: regPurpose,
                       costPerHead: Number(regCostPerHead),
+                      transportationCost: Number(regTransportationCost || 0),
+                      feedingCost: Number(regFeedingCost || 0),
+                      medicationCost: Number(regMedicationCost || 0),
                     });
                   }
                   onClose();
@@ -1518,15 +1527,96 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
                   </div>
                 </div>
 
-                {/* Valuation preview */}
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-blue-900 font-semibold block">Total Batch Acquisition Value:</span>
-                    <span className="text-blue-700 text-[11px]">Headcount ({regHeadCount}) × Cost per Head (₦{Number(regCostPerHead || 0).toLocaleString()})</span>
+                {/* 3 OPERATIONAL INTAKE EXPENSES (Transportation, Feeding, Medication) */}
+                <div className="p-4 bg-emerald-50/70 border border-emerald-300 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-black text-emerald-950 block">
+                        Intake Operational Costs (Fed to Level 2 & 3 Ledger)
+                      </span>
+                      <p className="text-[10px] text-emerald-800">
+                        Add initial haulage, feed supply, or veterinary treatment for this new animal intake.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 border border-emerald-300">
+                      Live Ledger Sync
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <span className="font-mono font-black text-sm text-blue-950">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* 1. Transportation Cost */}
+                    <div>
+                      <label className="block text-slate-800 font-bold mb-1 text-[11px]">
+                        Transportation Cost (₦)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={regTransportationCost}
+                        onChange={(e) => setRegTransportationCost(Number(e.target.value))}
+                        placeholder="₦0"
+                        className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono font-bold text-xs"
+                      />
+                      <span className="text-[10px] text-slate-500">Haulage / Truck delivery</span>
+                    </div>
+
+                    {/* 2. Feeding Cost */}
+                    <div>
+                      <label className="block text-slate-800 font-bold mb-1 text-[11px]">
+                        Feeding Cost (₦)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={regFeedingCost}
+                        onChange={(e) => setRegFeedingCost(Number(e.target.value))}
+                        placeholder="₦0"
+                        className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono font-bold text-xs"
+                      />
+                      <span className="text-[10px] text-slate-500">Initial feed bags cost</span>
+                    </div>
+
+                    {/* 3. Medication Cost */}
+                    <div>
+                      <label className="block text-slate-800 font-bold mb-1 text-[11px]">
+                        Medication Cost (₦)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={regMedicationCost}
+                        onChange={(e) => setRegMedicationCost(Number(e.target.value))}
+                        placeholder="₦0"
+                        className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono font-bold text-xs"
+                      />
+                      <span className="text-[10px] text-slate-500">Vaccines, dips & prophylaxis</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Valuation preview */}
+                <div className="p-3.5 bg-slate-900 text-white rounded-2xl space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300 text-[11px]">Animal Purchase Acquisition:</span>
+                    <span className="font-mono text-slate-200">
                       ₦{(Number(regHeadCount || 0) * Number(regCostPerHead || 0)).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-300 text-[11px]">
+                    <span>Intake Transport + Feed + Meds:</span>
+                    <span className="font-mono text-slate-200">
+                      +₦{(Number(regTransportationCost || 0) + Number(regFeedingCost || 0) + Number(regMedicationCost || 0)).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between">
+                    <span className="font-black text-white text-xs">Total Initial Intake Outflow:</span>
+                    <span className="font-mono font-black text-sm text-emerald-400">
+                      ₦{(
+                        Number(regHeadCount || 0) * Number(regCostPerHead || 0) +
+                        Number(regTransportationCost || 0) +
+                        Number(regFeedingCost || 0) +
+                        Number(regMedicationCost || 0)
+                      ).toLocaleString()}
                     </span>
                   </div>
                 </div>

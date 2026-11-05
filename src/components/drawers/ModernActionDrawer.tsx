@@ -87,7 +87,7 @@ interface ActionDrawerProps {
   inventory: InventoryItem[];
   fleet: FleetVehicle[];
   onAddFeedLog: (data: { section: LivestockSection; pen: string; feedType: string; bags: number }) => void;
-  onAddRemittance: (data: { vehiclePlate: string; driverName: string; target: number; remitted: number; paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'POS' }) => void;
+  onAddRemittance: (data: { vehiclePlate: string; driverName: string; target: number; remitted: number; paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'POS'; periodType?: 'DAILY' | 'WEEKLY' }) => void;
   onAddMedical: (data: {
     section: LivestockSection;
     targetBatch: string;
@@ -103,7 +103,7 @@ interface ActionDrawerProps {
   onAddRequisition: (data: { category: any; title: string; description: string; amount: number; terms: string; vendorName?: string }) => void;
   onAddYield: (data: { section: LivestockSection; batchOrPen: string; yieldType: YieldType; quantity: number; feedBags: number }) => void;
   onAddSale: (data: { section: LivestockSection; description: string; quantity: number; unitPrice: number; customer: string; paymentStatus: any }) => void;
-  onAddExpense: (data: { division: any; category: ExpenseCategory; description: string; amount: number; vendor: string }) => void;
+  onAddExpense: (data: { division: any; category: ExpenseCategory; description: string; amount: number; vendor: string; section?: LivestockSection }) => void;
   onAddFuelMaintenance?: (data: {
     vehiclePlate: string;
     vehicleType: VehicleType;
@@ -170,11 +170,17 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
 
   // Synchronize drawer default section if opened with a specific initialSection
   useEffect(() => {
+    if (activeDrawer === 'REGISTER_LIVESTOCK') {
+      setRegTransportationCost(0);
+      setRegFeedingCost(0);
+      setRegMedicationCost(0);
+    }
     if (initialSection) {
       setFeedSection(initialSection);
       setMedSection(initialSection);
       setRegSection(initialSection);
       setSaleSection(initialSection);
+      setExpFarmSection(initialSection);
       const presets = BREED_PRESETS[initialSection] || [];
       if (presets.length > 0) {
         setRegSubType(presets[0].name);
@@ -185,6 +191,7 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
   }, [initialSection, activeDrawer]);
 
   // 2. Remittance State
+  const [remitPeriod, setRemitPeriod] = useState<'DAILY' | 'WEEKLY'>('DAILY');
   const [selectedVehicle, setSelectedVehicle] = useState(fleet[0]?.plateNumber || 'KSF-842-XB');
   const matchedVehicle = fleet.find((v) => v.plateNumber === selectedVehicle || v.id === selectedVehicle) || fleet[0];
   const [targetAmount, setTargetAmount] = useState<number>(matchedVehicle ? matchedVehicle.dailyTargetAmount : 20000);
@@ -227,6 +234,7 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
 
   // 6. Expense State
   const [expDiv, setExpDiv] = useState<'LIVESTOCK_FARM' | 'TRANSPORT_SERVICES' | 'EXECUTIVE_OPS' | 'FUTURE_VENTURES'>('LIVESTOCK_FARM');
+  const [expFarmSection, setExpFarmSection] = useState<LivestockSection>('CATTLE');
   const [expCategory, setExpCategory] = useState<ExpenseCategory>('FEED_PURCHASE');
   const [expDesc, setExpDesc] = useState('Bulk Procurement of Starter Mash Bags');
   const [expAmount, setExpAmount] = useState<number>(95000);
@@ -458,7 +466,7 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
               </form>
             )}
 
-            {/* 2. REMITTANCE FORM */}
+            {/* 2. REMITTANCE FORM (DAILY & WEEKLY DRIVER INCOME) */}
             {activeDrawer === 'REMITTANCE' && (
               <form
                 id="remit-form"
@@ -470,11 +478,49 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
                     target: Number(targetAmount),
                     remitted: Number(remitAmount),
                     paymentMethod,
+                    periodType: remitPeriod,
                   });
                   onClose();
                 }}
                 className="space-y-4 text-xs"
               >
+                {/* Remittance Frequency Selector: Daily vs Weekly Return */}
+                <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemitPeriod('DAILY');
+                      if (matchedVehicle) {
+                        setTargetAmount(matchedVehicle.dailyTargetAmount);
+                        setRemitAmount(matchedVehicle.dailyTargetAmount);
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      remitPeriod === 'DAILY'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>📅 Daily Income Return</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemitPeriod('WEEKLY');
+                      if (matchedVehicle) {
+                        setTargetAmount(matchedVehicle.dailyTargetAmount * 6);
+                        setRemitAmount(matchedVehicle.dailyTargetAmount * 6);
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      remitPeriod === 'WEEKLY'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>📊 Weekly Income Remittance</span>
+                  </button>
+                </div>
                 {/* Live Arrears / Surplus Widget */}
                 <div
                   className={`p-4 rounded-xl border space-y-2 ${
@@ -1011,6 +1057,7 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
                     description: expDesc,
                     amount: Number(expAmount),
                     vendor: expVendor,
+                    section: expDiv === 'LIVESTOCK_FARM' ? expFarmSection : undefined,
                   });
                   onClose();
                 }}
@@ -1049,6 +1096,30 @@ export const ModernActionDrawer: React.FC<ActionDrawerProps> = ({
                     </select>
                   </div>
                 </div>
+
+                {/* If Livestock Farm, select specific livestock unit */}
+                {expDiv === 'LIVESTOCK_FARM' && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5">
+                    <label className="block text-emerald-950 font-bold text-[11px]">
+                      Target Livestock Unit (Allocates to Unit Other Expenses)
+                    </label>
+                    <select
+                      value={expFarmSection}
+                      onChange={(e) => setExpFarmSection(e.target.value as LivestockSection)}
+                      className="w-full bg-white border border-emerald-300 rounded-xl p-2.5 text-slate-900 font-medium text-xs"
+                    >
+                      <option value="CATTLE">A. Cattle Ranch & Feedlot</option>
+                      <option value="RAMS">B. Rams & Sheep Unit</option>
+                      <option value="GOATS">C. Goats Breeding Unit</option>
+                      <option value="RABBITS">D. Rabbits Production Unit</option>
+                      <option value="POULTRY">E. Poultry Sector (Chickens)</option>
+                      <option value="WATERFOWL">F. Waterfowl Unit (Ducks & Geese)</option>
+                    </select>
+                    <span className="text-[10px] text-emerald-800 block">
+                      Directly updates Other Expenses & Net Profit/Loss on that unit's card in Level 2 & 3.
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Expense Purpose / Narrative</label>

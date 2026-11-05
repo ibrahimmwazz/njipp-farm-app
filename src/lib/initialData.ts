@@ -18,7 +18,8 @@ import {
   ViewingCentreMatchEvent,
   CashCropsPlotRecord,
   TableWaterBatchRun,
-  ForestryNurseryBed
+  ForestryNurseryBed,
+  VehicleCategoryLedgerRow
 } from '../types';
 
 // ==========================================
@@ -1046,6 +1047,57 @@ export const initialFleet: FleetVehicle[] = [
       ]
     }
   }
+];
+
+export const initialVehicleLedger: VehicleCategoryLedgerRow[] = [
+  {
+    id: 'VLEDGER-BUS',
+    category: 'BUS',
+    categoryName: 'Commercial Buses Fleet (Toyota Hiace / Coaster)',
+    icon: '🚌',
+    currentCount: 3,
+    inRepair: 0,
+    costPerAsset: 6500000,
+    fuelTransitCost: 320000,
+    maintenanceCost: 145000,
+    driverSalary: 120000,
+    otherExpenses: 45000,
+    totalExpenses: 630000,
+    dailyWeeklyIncome: 1120000,
+    netProfitLoss: 490000,
+  },
+  {
+    id: 'VLEDGER-TRIKE',
+    category: 'TRIKE',
+    categoryName: 'Commercial Tricycles (TVS King / Keke NAPEP)',
+    icon: '🛺',
+    currentCount: 6,
+    inRepair: 1,
+    costPerAsset: 1450000,
+    fuelTransitCost: 180000,
+    maintenanceCost: 65000,
+    driverSalary: 90000,
+    otherExpenses: 25000,
+    totalExpenses: 360000,
+    dailyWeeklyIncome: 680000,
+    netProfitLoss: 320000,
+  },
+  {
+    id: 'VLEDGER-MC',
+    category: 'MOTORCYCLE',
+    categoryName: 'Dispatch Motorcycles (Bajaj Boxer BM150)',
+    icon: '🏍️',
+    currentCount: 8,
+    inRepair: 1,
+    costPerAsset: 1050000,
+    fuelTransitCost: 95000,
+    maintenanceCost: 38000,
+    driverSalary: 70000,
+    otherExpenses: 18000,
+    totalExpenses: 221000,
+    dailyWeeklyIncome: 450000,
+    netProfitLoss: 229000,
+  },
 ];
 
 export const initialRemittances: DailyRemittanceRecord[] = [

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PortalId,
   UserRoleLevel,
@@ -30,11 +30,13 @@ import {
   ForestryNurseryBed,
   UserSession,
   AnimalProductionLedgerRow,
+  VehicleCategoryLedgerRow,
   LivestockPurpose
 } from '@/types';
 import {
   initialLivestock,
   initialAnimalLedger,
+  initialVehicleLedger,
   initialFarmInventory,
   initialInventoryMovements,
   initialFeedLogs,
@@ -79,6 +81,7 @@ export default function EnterprisePortal() {
   // Departmental Enterprise State
   const [livestock, setLivestock] = useState<LivestockBatch[]>(initialLivestock);
   const [animalLedger, setAnimalLedger] = useState<AnimalProductionLedgerRow[]>(initialAnimalLedger);
+  const [vehicleLedger, setVehicleLedger] = useState<VehicleCategoryLedgerRow[]>(initialVehicleLedger);
   const [inventory, setInventory] = useState<InventoryItem[]>(initialFarmInventory);
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>(initialInventoryMovements);
   const [feedLogs, setFeedLogs] = useState<FarmFeedingRecord[]>(initialFeedLogs);
@@ -99,6 +102,113 @@ export default function EnterprisePortal() {
   const [plots, setPlots] = useState<CashCropsPlotRecord[]>(initialPlots);
   const [waterBatches, setWaterBatches] = useState<TableWaterBatchRun[]>(initialWaterBatches);
   const [nurseryBeds, setNurseryBeds] = useState<ForestryNurseryBed[]>(initialNurseryBeds);
+
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // 1. Hydrate state from browser localStorage on initial mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('njipp_bms_state_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.livestock) setLivestock(parsed.livestock);
+        if (parsed.animalLedger) setAnimalLedger(parsed.animalLedger);
+        if (parsed.vehicleLedger) setVehicleLedger(parsed.vehicleLedger);
+        if (parsed.inventory) setInventory(parsed.inventory);
+        if (parsed.inventoryMovements) setInventoryMovements(parsed.inventoryMovements);
+        if (parsed.feedLogs) setFeedLogs(parsed.feedLogs);
+        if (parsed.yields) setYields(parsed.yields);
+        if (parsed.sales) setSales(parsed.sales);
+        if (parsed.medicalLogs) setMedicalLogs(parsed.medicalLogs);
+        if (parsed.fleet) setFleet(parsed.fleet);
+        if (parsed.remittances) setRemittances(parsed.remittances);
+        if (parsed.fuelLogs) setFuelLogs(parsed.fuelLogs);
+        if (parsed.expenses) setExpenses(parsed.expenses);
+        if (parsed.purchaseOrders) setPurchaseOrders(parsed.purchaseOrders);
+        if (parsed.debtAging) setDebtAging(parsed.debtAging);
+        if (parsed.pendingApprovals) setPendingApprovals(parsed.pendingApprovals);
+        if (parsed.auditTrail) setAuditTrail(parsed.auditTrail);
+      }
+    } catch (e) {
+      console.warn('Could not read from localStorage:', e);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // 2. Synchronize changes to localStorage once hydrated
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      const payload = {
+        livestock,
+        animalLedger,
+        vehicleLedger,
+        inventory,
+        inventoryMovements,
+        feedLogs,
+        yields,
+        sales,
+        medicalLogs,
+        fleet,
+        remittances,
+        fuelLogs,
+        expenses,
+        purchaseOrders,
+        debtAging,
+        pendingApprovals,
+        auditTrail,
+      };
+      localStorage.setItem('njipp_bms_state_v2', JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Could not persist to localStorage:', e);
+    }
+  }, [
+    isHydrated,
+    livestock,
+    animalLedger,
+    vehicleLedger,
+    inventory,
+    inventoryMovements,
+    feedLogs,
+    yields,
+    sales,
+    medicalLogs,
+    fleet,
+    remittances,
+    fuelLogs,
+    expenses,
+    purchaseOrders,
+    debtAging,
+    pendingApprovals,
+    auditTrail,
+  ]);
+
+  // 3. Reset All Data to Factory Defaults
+  const handleResetDemo = () => {
+    try {
+      localStorage.removeItem('njipp_bms_state_v2');
+    } catch (e) {
+      console.warn(e);
+    }
+    setLivestock(initialLivestock);
+    setAnimalLedger(initialAnimalLedger);
+    setVehicleLedger(initialVehicleLedger);
+    setInventory(initialFarmInventory);
+    setInventoryMovements(initialInventoryMovements);
+    setFeedLogs(initialFeedLogs);
+    setYields(initialYields);
+    setSales(initialSales);
+    setMedicalLogs(initialMedicalLogs);
+    setFleet(initialFleet);
+    setRemittances(initialRemittances);
+    setFuelLogs(initialFuelLogs);
+    setExpenses(initialExpenses);
+    setPurchaseOrders(initialPurchaseOrders);
+    setDebtAging(initialDebtAging);
+    setPendingApprovals(initialPendingApprovals);
+    setAuditTrail(initialAuditTrail);
+    showToast('🔄 Demo data reset to official factory defaults.', 'success');
+  };
 
   // Toast Notification Trigger
   const showToast = (text: string, type: 'success' | 'warning' | 'danger' = 'success') => {
@@ -208,13 +318,14 @@ export default function EnterprisePortal() {
     showToast(`🌾 Feed Log Recorded: -${data.bags} bags automatically deducted from Warehouse Inventory.`, 'success');
   };
 
-  // 2. Driver Remittance with Arrears Accounting
+  // 2. Driver Remittance with Arrears Accounting & Fleet Category P&L Sync
   const handleAddRemittance = (data: {
     vehiclePlate: string;
     driverName: string;
     target: number;
     remitted: number;
     paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'POS';
+    periodType?: 'DAILY' | 'WEEKLY';
   }) => {
     const deficit = data.remitted - data.target;
     const newRemit: DailyRemittanceRecord = {
@@ -227,6 +338,7 @@ export default function EnterprisePortal() {
       remittedAmount: data.remitted,
       deficitSurplus: deficit,
       paymentMethod: data.paymentMethod,
+      periodType: data.periodType || 'DAILY',
       status: deficit < 0 ? 'PARTIAL_ARREARS' : 'CLEARED',
       receivedBy: `${currentRole} Cashier`,
     };
@@ -251,6 +363,24 @@ export default function EnterprisePortal() {
       );
     }
 
+    // REACTIVE LINK FLEET: Update vehicle category ledger income & net profit/loss
+    const matchedVehicle = fleet.find((v) => v.plateNumber === data.vehiclePlate);
+    const vType = matchedVehicle ? matchedVehicle.type : 'BUS';
+    setVehicleLedger((prev) =>
+      prev.map((row) => {
+        if (row.category === vType) {
+          const dailyWeeklyIncome = (row.dailyWeeklyIncome || 0) + data.remitted;
+          const netProfitLoss = dailyWeeklyIncome - row.totalExpenses;
+          return {
+            ...row,
+            dailyWeeklyIncome,
+            netProfitLoss,
+          };
+        }
+        return row;
+      })
+    );
+
     const auditEntry: AuditTrailEntry = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
       timestamp: new Date().toLocaleTimeString(),
@@ -258,7 +388,7 @@ export default function EnterprisePortal() {
       performedBy: `User (${currentRole})`,
       userId: `USR-${Date.now().toString().slice(-3)}`,
       roleLevel: currentRole,
-      details: `${data.driverName} (${data.vehiclePlate}) remitted ₦${data.remitted.toLocaleString()} against target ₦${data.target.toLocaleString()}. Deficit: ₦${deficit.toLocaleString()}.`,
+      details: `${data.driverName} (${data.vehiclePlate}) remitted ₦${data.remitted.toLocaleString()} against target ₦${data.target.toLocaleString()} (${data.periodType || 'DAILY'}). Deficit: ₦${deficit.toLocaleString()}. Fleet category ledger updated.`,
       ipAddress: '192.168.1.18 (Cashier Desk)',
       hash: `SHA256:${Math.random().toString(36).substring(2)}${Date.now()}`,
     };
@@ -267,7 +397,7 @@ export default function EnterprisePortal() {
     showToast(
       deficit < 0
         ? `⚠️ Remittance posted with ₦${Math.abs(deficit).toLocaleString()} deficit recorded as driver arrears.`
-        : `✅ Remittance of ₦${data.remitted.toLocaleString()} cleared in full!`,
+        : `✅ Remittance of ₦${data.remitted.toLocaleString()} (${data.periodType || 'DAILY'}) cleared in full!`,
       deficit < 0 ? 'warning' : 'success'
     );
   };
@@ -455,7 +585,7 @@ export default function EnterprisePortal() {
     );
   };
 
-  // 4. Yield Collection Log with FCR
+  // 4. Yield Collection Log with FCR & Store Inventory Sync
   const handleAddYield = (data: {
     section: LivestockSection;
     batchOrPen: string;
@@ -485,6 +615,29 @@ export default function EnterprisePortal() {
 
     setYields((prev) => [newYield, ...prev]);
 
+    // REACTIVE LINK HARVEST: If eggs gathered, automatically add crates to INV-07 warehouse inventory
+    if (data.yieldType === 'EGGS_CRATES') {
+      setInventory((prev) =>
+        prev.map((item) =>
+          item.id === 'INV-07' ? { ...item, currentStock: item.currentStock + data.quantity } : item
+        )
+      );
+
+      const moveEntry: InventoryMovement = {
+        id: `MOV-${Date.now().toString().slice(-4)}`,
+        timestamp: new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString().slice(0, 5),
+        itemId: 'INV-07',
+        itemName: 'Harvested Fresh Eggs',
+        movementType: 'STOCK_IN_HARVEST',
+        quantity: data.quantity,
+        balanceAfter: (inventory.find((i) => i.id === 'INV-07')?.currentStock || 124) + data.quantity,
+        unit: 'Crates',
+        referenceDoc: `DAILY-HARVEST-${data.batchOrPen}`,
+        initiatedBy: `${currentRole} Yield Officer`,
+      };
+      setInventoryMovements((prev) => [moveEntry, ...prev]);
+    }
+
     const auditEntry: AuditTrailEntry = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
       timestamp: new Date().toLocaleTimeString(),
@@ -492,16 +645,16 @@ export default function EnterprisePortal() {
       performedBy: `User (${currentRole})`,
       userId: `USR-${Date.now().toString().slice(-3)}`,
       roleLevel: currentRole,
-      details: `Logged ${data.quantity} units for ${data.batchOrPen}. FCR computed at ${calculatedFCR}.`,
+      details: `Logged ${data.quantity} units for ${data.batchOrPen}. FCR computed at ${calculatedFCR}. Store stock incremented.`,
       ipAddress: '192.168.1.42 (Egg Processing Terminal)',
       hash: `SHA256:${Math.random().toString(36).substring(2)}${Date.now()}`,
     };
     setAuditTrail((prev) => [auditEntry, ...prev]);
 
-    showToast(`🥚 Yield logged: ${data.quantity} units registered with FCR ${calculatedFCR}.`, 'success');
+    showToast(`🥚 Yield logged: +${data.quantity} crates added to Warehouse Inventory with FCR ${calculatedFCR}.`, 'success');
   };
 
-  // 5. Livestock & Produce Sales Log (Credit sales auto-feed to Accounts Receivable)
+  // 5. Livestock & Produce Sales Log (Deducts Live Headcount or Egg Inventory, feeds Credit Debt)
   const handleAddSale = (data: {
     section: LivestockSection;
     description: string;
@@ -562,23 +715,111 @@ export default function EnterprisePortal() {
       }
     }
 
-    // Update total income / revenue in the Animal Production Ledger
-    setAnimalLedger((prev) => {
-      let updated = false;
-      return prev.map((row) => {
-        if (!updated && row.section === data.section) {
-          updated = true;
-          const newRevenue = (row.totalIncomeRevenue || 0) + totalAmount;
-          const netProfitLoss = newRevenue - row.totalExpenses;
-          return {
-            ...row,
-            totalIncomeRevenue: newRevenue,
-            netProfitLoss,
-          };
-        }
-        return row;
+    const isEggs =
+      data.description.toLowerCase().includes('egg') ||
+      data.description.toLowerCase().includes('crate');
+    const isMilk =
+      data.description.toLowerCase().includes('milk') ||
+      data.description.toLowerCase().includes('liter');
+
+    if (isEggs) {
+      // Deduct sold egg crates from INV-07 warehouse inventory
+      setInventory((prev) =>
+        prev.map((item) => {
+          if (item.id === 'INV-07') {
+            const currentStock = Math.max(0, item.currentStock - data.quantity);
+            return { ...item, currentStock };
+          }
+          return item;
+        })
+      );
+      setInventoryMovements((prev) => [
+        {
+          id: `MOV-${Date.now().toString().slice(-4)}`,
+          timestamp: new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString().slice(0, 5),
+          itemId: 'INV-07',
+          itemName: 'Harvested Fresh Eggs',
+          movementType: 'STOCK_OUT_SALE',
+          quantity: data.quantity,
+          balanceAfter: Math.max(0, (inventory.find((i) => i.id === 'INV-07')?.currentStock || 124) - data.quantity),
+          unit: 'Crates',
+          referenceDoc: `SALE-${data.customer}`,
+          initiatedBy: `${currentRole} Commercial Lead`,
+        },
+        ...prev,
+      ]);
+    } else if (!isMilk) {
+      // REACTIVE LINK LIVE ANIMALS: Deduct sold headcount from Live Animals in animalLedger
+      setAnimalLedger((prev) => {
+        let matched = false;
+        return prev.map((row) => {
+          if (!matched && row.section === data.section && row.liveCount > 0) {
+            const isNameMatch =
+              !data.description ||
+              row.breedOrProduct.toLowerCase().includes(data.description.toLowerCase()) ||
+              data.description.toLowerCase().includes(row.breedOrProduct.toLowerCase());
+            if (isNameMatch || row.section === data.section) {
+              matched = true;
+              const newLiveCount = Math.max(0, row.liveCount - data.quantity);
+              const totalExpenses =
+                (newLiveCount + row.casualties) * row.costPerHead +
+                row.transportationCost +
+                row.feedingCost +
+                row.medicationCost +
+                row.salaries +
+                row.otherExpenses;
+              const totalUnitCost = newLiveCount > 0 ? Math.round(totalExpenses / newLiveCount) : 0;
+              const newRevenue = (row.totalIncomeRevenue || 0) + totalAmount;
+              const netProfitLoss = newRevenue - totalExpenses;
+              return {
+                ...row,
+                liveCount: newLiveCount,
+                totalExpenses,
+                totalUnitCost,
+                totalIncomeRevenue: newRevenue,
+                netProfitLoss,
+              };
+            }
+          }
+          return row;
+        });
       });
-    });
+
+      // Also deduct from live headcount in Livestock batch registry
+      setLivestock((prev) => {
+        let deducted = false;
+        return prev.map((batch) => {
+          if (!deducted && batch.section === data.section && batch.headCount > 0) {
+            deducted = true;
+            return {
+              ...batch,
+              headCount: Math.max(0, batch.headCount - data.quantity),
+            };
+          }
+          return batch;
+        });
+      });
+    }
+
+    // Always update revenue if produce was sold
+    if (isEggs || isMilk) {
+      setAnimalLedger((prev) => {
+        let updated = false;
+        return prev.map((row) => {
+          if (!updated && row.section === data.section) {
+            updated = true;
+            const newRevenue = (row.totalIncomeRevenue || 0) + totalAmount;
+            const netProfitLoss = newRevenue - row.totalExpenses;
+            return {
+              ...row,
+              totalIncomeRevenue: newRevenue,
+              netProfitLoss,
+            };
+          }
+          return row;
+        });
+      });
+    }
 
     const auditEntry: AuditTrailEntry = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
@@ -587,7 +828,7 @@ export default function EnterprisePortal() {
       performedBy: `User (${currentRole})`,
       userId: `USR-${Date.now().toString().slice(-3)}`,
       roleLevel: currentRole,
-      details: `Sold ${data.quantity} items to ${data.customer} for ₦${totalAmount.toLocaleString()} (${data.paymentStatus}). Cross-ledger updated.`,
+      details: `Sold ${data.quantity} items to ${data.customer} for ₦${totalAmount.toLocaleString()} (${data.paymentStatus}). Stock/Headcount deducted.`,
       ipAddress: '192.168.1.18 (Sales Desk)',
       hash: `SHA256:${Math.random().toString(36).substring(2)}${Date.now()}`,
     };
@@ -596,18 +837,19 @@ export default function EnterprisePortal() {
     showToast(
       data.paymentStatus === 'CREDIT_PENDING_L3'
         ? `📋 Credit sale posted! ₦${totalAmount.toLocaleString()} automatically fed into Accounts Receivable Debt Aging.`
-        : `💰 Livestock cash sale of ₦${totalAmount.toLocaleString()} recorded.`,
+        : `💰 Livestock sale of ₦${totalAmount.toLocaleString()} recorded. Headcount/Inventory updated.`,
       'success'
     );
   };
 
-  // 6. Operational Field Expense Log with Receipt
+  // 6. Operational Field Expense Log with Unit "Other Expenses" Link
   const handleAddExpense = (data: {
     division: any;
     category: ExpenseCategory;
     description: string;
     amount: number;
     vendor: string;
+    section?: LivestockSection;
   }) => {
     const newExpense: CategorizedExpenseRecord = {
       id: `EXP-${Date.now().toString().slice(-4)}`,
@@ -624,6 +866,37 @@ export default function EnterprisePortal() {
 
     setExpenses((prev) => [newExpense, ...prev]);
 
+    // REACTIVE LINK: Allocate expense to specific livestock unit's "Other Expenses" in animalLedger
+    if (data.section || data.division === 'LIVESTOCK_FARM') {
+      const targetSec = data.section || 'CATTLE';
+      setAnimalLedger((prev) => {
+        let matched = false;
+        return prev.map((row) => {
+          if (!matched && row.section === targetSec) {
+            matched = true;
+            const newOther = (row.otherExpenses || 0) + data.amount;
+            const totalExpenses =
+              (row.liveCount + row.casualties) * row.costPerHead +
+              row.transportationCost +
+              row.feedingCost +
+              row.medicationCost +
+              row.salaries +
+              newOther;
+            const totalUnitCost = row.liveCount > 0 ? Math.round(totalExpenses / row.liveCount) : 0;
+            const netProfitLoss = (row.totalIncomeRevenue || 0) - totalExpenses;
+            return {
+              ...row,
+              otherExpenses: newOther,
+              totalExpenses,
+              totalUnitCost,
+              netProfitLoss,
+            };
+          }
+          return row;
+        });
+      });
+    }
+
     const auditEntry: AuditTrailEntry = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
       timestamp: new Date().toLocaleTimeString(),
@@ -631,7 +904,7 @@ export default function EnterprisePortal() {
       performedBy: `User (${currentRole})`,
       userId: `USR-${Date.now().toString().slice(-3)}`,
       roleLevel: currentRole,
-      details: `Disbursed ₦${data.amount.toLocaleString()} for ${data.category} (${data.vendor}). Receipt scanned.`,
+      details: `Disbursed ₦${data.amount.toLocaleString()} for ${data.category} (${data.vendor}). Unit: ${data.section || 'General'}. Receipt scanned.`,
       ipAddress: '192.168.1.10 (Operations Office)',
       hash: `SHA256:${Math.random().toString(36).substring(2)}${Date.now()}`,
     };
@@ -699,6 +972,29 @@ export default function EnterprisePortal() {
     // Update current vehicle mileage
     setFleet((prev) =>
       prev.map((v) => (v.plateNumber === data.vehiclePlate ? { ...v, currentMileageKm: data.mileageKm } : v))
+    );
+
+    // REACTIVE LINK FLEET: Update vehicle category ledger expenses & net profit
+    setVehicleLedger((prev) =>
+      prev.map((row) => {
+        if (row.category === data.vehicleType) {
+          const fuelTransitCost =
+            data.recordType === 'FUEL' ? (row.fuelTransitCost || 0) + data.costTotal : row.fuelTransitCost;
+          const maintenanceCost =
+            data.recordType === 'MAINTENANCE' ? (row.maintenanceCost || 0) + data.costTotal : row.maintenanceCost;
+          const totalExpenses =
+            fuelTransitCost + maintenanceCost + (row.driverSalary || 0) + (row.otherExpenses || 0);
+          const netProfitLoss = (row.dailyWeeklyIncome || 0) - totalExpenses;
+          return {
+            ...row,
+            fuelTransitCost,
+            maintenanceCost,
+            totalExpenses,
+            netProfitLoss,
+          };
+        }
+        return row;
+      })
     );
 
     const auditEntry: AuditTrailEntry = {
@@ -1302,6 +1598,7 @@ export default function EnterprisePortal() {
           setUserSession(null);
           showToast('Signed out of session safely.', 'success');
         }}
+        onResetDemo={handleResetDemo}
         pendingApprovalsCount={pendingApprovals.length}
         isOpenMobile={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
@@ -1372,6 +1669,7 @@ export default function EnterprisePortal() {
             medicalLogs={medicalLogs}
             inventory={inventory}
             ledgerRows={animalLedger}
+            vehicleRows={vehicleLedger}
             onRequestQuarantineDelete={handleDeleteRecord}
             onClearAnomalyFlag={(id) => {
               setFuelLogs((prev) =>
@@ -1414,6 +1712,7 @@ export default function EnterprisePortal() {
                 fleet={fleet}
                 remittances={remittances}
                 fuelLogs={fuelLogs}
+                vehicleRows={vehicleLedger}
                 onOpenRemittanceDrawer={() => setActiveDrawer('REMITTANCE')}
                 onOpenFuelDrawer={() => setActiveDrawer('FUEL_MAINTENANCE')}
                 onDeleteRecord={handleDeleteRecord}

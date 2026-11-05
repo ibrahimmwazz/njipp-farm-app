@@ -204,8 +204,26 @@ export interface DailyRemittanceRecord {
   remittedAmount: number;
   deficitSurplus: number;
   paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'POS';
+  periodType?: 'DAILY' | 'WEEKLY';
   status: 'CLEARED' | 'PARTIAL_ARREARS' | 'DEFAULTED' | 'QUARANTINED';
   receivedBy: string;
+}
+
+export interface VehicleCategoryLedgerRow {
+  id: string;
+  category: VehicleType;
+  categoryName: string;
+  icon: string;
+  currentCount: number;
+  inRepair: number;
+  costPerAsset: number;
+  fuelTransitCost: number;
+  maintenanceCost: number;
+  driverSalary: number;
+  otherExpenses: number;
+  totalExpenses: number;
+  dailyWeeklyIncome: number;
+  netProfitLoss: number;
 }
 
 export type MaintenanceClassification = 'SCHEDULED_PREVENTATIVE' | 'UNSCHEDULED_CORRECTIVE';

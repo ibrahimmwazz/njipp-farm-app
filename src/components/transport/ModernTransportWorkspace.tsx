@@ -28,15 +28,18 @@ import {
   FleetVehicle,
   DailyRemittanceRecord,
   FuelAndMaintenanceRecord,
-  VehicleType
+  VehicleType,
+  VehicleCategoryLedgerRow
 } from '@/types';
 import { ModernMetricCard } from '@/components/ui/ModernMetricCard';
+import { TransportUnitsDashboard } from './TransportUnitsDashboard';
 
 interface ModernTransportProps {
   currentRole: UserRoleLevel;
   fleet: FleetVehicle[];
   remittances: DailyRemittanceRecord[];
   fuelLogs: FuelAndMaintenanceRecord[];
+  vehicleRows?: VehicleCategoryLedgerRow[];
   onOpenRemittanceDrawer: () => void;
   onOpenFuelDrawer: () => void;
   onDeleteRecord: (id: string, type: string) => void;
@@ -47,6 +50,7 @@ export const ModernTransportWorkspace: React.FC<ModernTransportProps> = ({
   fleet,
   remittances,
   fuelLogs,
+  vehicleRows = [],
   onOpenRemittanceDrawer,
   onOpenFuelDrawer,
   onDeleteRecord,
@@ -162,161 +166,13 @@ export const ModernTransportWorkspace: React.FC<ModernTransportProps> = ({
         ))}
       </div>
 
-      {/* ================= TAB 1: FLEET OVERVIEW ================= */}
+      {/* ================= TAB 1: FLEET OVERVIEW & VEHICLE CATEGORY DASHBOARD ================= */}
       {activeTab === 'OVERVIEW' && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <ModernMetricCard
-              title="Total Vehicles Value"
-              value={`₦${(totalMarketValuation / 1000000).toFixed(2)}M`}
-              subtitle="Estimated current value of all vehicles"
-              change="-2.1%"
-              trend="down"
-              trendGood={false}
-              accentColor="blue"
-              icon={<Truck className="w-5 h-5" />}
-              badge={`${fleet.length} Vehicles`}
-            />
-            <ModernMetricCard
-              title="Today's Cash Remitted"
-              value={`₦${totalRemitted.toLocaleString()}`}
-              subtitle="Daily driver returns received"
-              change="+14.2%"
-              trend="up"
-              trendGood={true}
-              accentColor="emerald"
-              icon={<Coins className="w-5 h-5" />}
-              badge="Today"
-            />
-            <ModernMetricCard
-              title="Unpaid Driver Balances"
-              value={`₦${totalArrears.toLocaleString()}`}
-              subtitle="Target deficits to be collected"
-              change={totalArrears > 0 ? "Pending Debt" : "Zero Arrears"}
-              trend="down"
-              trendGood={totalArrears === 0}
-              accentColor="rose"
-              icon={<TrendingDown className="w-5 h-5" />}
-              badge="To Collect"
-            />
-            <ModernMetricCard
-              title="Average Fuel Mileage"
-              value="20.3 KM/L"
-              subtitle="Average distance per liter of fuel"
-              change="+1.2 km/L"
-              trend="up"
-              trendGood={true}
-              accentColor="amber"
-              icon={<Fuel className="w-5 h-5" />}
-              badge="Good Mileage"
-            />
-          </div>
-
-          {/* DYNAMIC 3 VEHICLE ASSET VALUATION PANELS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* 1. Motorcycles */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                  <span className="text-2xl">🏍️</span> Commercial Motorcycles
-                </span>
-                <span className="text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
-                  {mcFleet.length} Units Registered
-                </span>
-              </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between text-slate-500">
-                  <span>Market Valuation:</span>
-                  <span className="font-mono-num font-black text-slate-900 text-base">
-                    ₦{mcValuation.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Target per Unit:</span>
-                  <span className="font-mono-num font-semibold text-slate-700">₦6,000 / day</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Efficiency Benchmark:</span>
-                  <span className="font-mono text-emerald-700 font-bold">~34.5 KM / L</span>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-slate-100 flex justify-between text-[11px] text-slate-500">
-                <span>{mcFleet.filter((v) => v.operationalStatus === 'ACTIVE').length} Active on Dispatch</span>
-                <span className="text-emerald-700 font-bold">Cleared</span>
-              </div>
-            </div>
-
-            {/* 2. Transit Buses */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                  <span className="text-2xl">🚌</span> Transit Commercial Buses
-                </span>
-                <span className="text-[10px] font-mono font-bold bg-blue-50 text-blue-800 px-2 py-0.5 rounded border border-blue-200">
-                  {busFleet.length} Units Registered
-                </span>
-              </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between text-slate-500">
-                  <span>Market Valuation:</span>
-                  <span className="font-mono-num font-black text-slate-900 text-base">
-                    ₦{busValuation.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Target per Unit:</span>
-                  <span className="font-mono-num font-semibold text-slate-700">₦20,000 / day</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Efficiency Benchmark:</span>
-                  <span className="font-mono text-slate-700 font-bold">~8.4 KM / L</span>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-slate-100 flex justify-between text-[11px] text-slate-500">
-                <span>{busFleet.filter((v) => v.operationalStatus === 'ACTIVE').length} Active on Transit Corridors</span>
-                <span className="text-blue-700 font-bold">100% Remitted</span>
-              </div>
-            </div>
-
-            {/* 3. Commercial Tricycles */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                  <span className="text-2xl">🛺</span> Commercial Tricycles (Trikes)
-                </span>
-                <span className="text-[10px] font-mono font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
-                  {trikeFleet.length} Units Registered
-                </span>
-              </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between text-slate-500">
-                  <span>Market Valuation:</span>
-                  <span className="font-mono-num font-black text-slate-900 text-base">
-                    ₦{trikeValuation.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>HP Debt Amortization:</span>
-                  <span className="font-mono-num font-bold text-rose-600">
-                    ₦{trikeHpDebt.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Efficiency Benchmark:</span>
-                  <span className="font-mono text-slate-700 font-bold">~18.2 KM / L</span>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-slate-100 flex justify-between text-[11px] text-slate-500">
-                <span>{trikeFleet.filter((v) => v.operationalStatus === 'ACTIVE').length} Active Units</span>
-                <span className="text-amber-700 font-bold">
-                  {totalArrears > 0 ? `⚠️ ₦${totalArrears.toLocaleString()} Arrears` : 'Reconciled'}
-                </span>
-              </div>
-            </div>
-
-          </div>
-        </div>
+        <TransportUnitsDashboard
+          vehicleRows={vehicleRows}
+          onOpenRemittanceDrawer={onOpenRemittanceDrawer}
+          onOpenFuelDrawer={onOpenFuelDrawer}
+        />
       )}
 
       {/* ================= TAB 2: VEHICLE ASSET REGISTER & DEPRECIATION ================= */}

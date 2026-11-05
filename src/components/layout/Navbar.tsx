@@ -13,7 +13,8 @@ import {
   Layers,
   LogOut,
   User,
-  ShieldAlert
+  ShieldAlert,
+  RotateCcw
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -22,6 +23,7 @@ interface NavbarProps {
   userSession?: UserSession | null;
   onLogout: () => void;
   pendingApprovalsCount: number;
+  onResetDemo?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -30,6 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   userSession,
   onLogout,
   pendingApprovalsCount,
+  onResetDemo,
 }) => {
   const currentRole = userSession?.role || 'LEVEL_3';
   const userName = userSession?.name || 'Corporate User';
@@ -161,11 +164,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
+          {/* RESET DEMO DEFAULTS */}
+          {onResetDemo && (
+            <button
+              onClick={onResetDemo}
+              title="Reset all data to official factory defaults"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all shadow-xs cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden md:inline">Reset Defaults</span>
+            </button>
+          )}
+
           {/* LOG OUT BUTTON */}
           <button
             onClick={onLogout}
             title="Terminate Active Session and Return to Login"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 hover:text-white bg-rose-50 hover:bg-rose-700 border border-rose-200 hover:border-rose-700 transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-700 hover:text-white bg-rose-50 hover:bg-rose-700 border border-rose-200 hover:border-rose-700 transition-all shadow-xs cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Sign Out</span>

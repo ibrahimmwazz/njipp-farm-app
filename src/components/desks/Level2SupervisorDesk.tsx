@@ -24,9 +24,11 @@ import {
   ProductionYieldRecord,
   FarmMedicalRecord,
   InventoryItem,
-  AnimalProductionLedgerRow
+  AnimalProductionLedgerRow,
+  VehicleCategoryLedgerRow
 } from '@/types';
 import { AnimalUnitsDashboard } from '@/components/farm/AnimalUnitsDashboard';
+import { TransportUnitsDashboard } from '@/components/transport/TransportUnitsDashboard';
 
 interface Level2SupervisorProps {
   quarantineRequests: PendingApprovalItem[];
@@ -36,6 +38,7 @@ interface Level2SupervisorProps {
   medicalLogs?: FarmMedicalRecord[];
   inventory?: InventoryItem[];
   ledgerRows?: AnimalProductionLedgerRow[];
+  vehicleRows?: VehicleCategoryLedgerRow[];
   onRequestQuarantineDelete: (id: string, type: string) => void;
   onClearAnomalyFlag: (id: string) => void;
 }
@@ -48,9 +51,11 @@ export const Level2SupervisorDesk: React.FC<Level2SupervisorProps> = ({
   medicalLogs = [],
   inventory = [],
   ledgerRows = [],
+  vehicleRows = [],
   onRequestQuarantineDelete,
   onClearAnomalyFlag,
 }) => {
+  const [activeRollupTab, setActiveRollupTab] = React.useState<'FARM' | 'TRANSPORT'>('FARM');
   // Clinical alerts: sick animals, medicines given with withdrawal days, or deaths
   const clinicalAlerts = medicalLogs.filter(
     (m) => m.mortalityCount > 0 || (m.withdrawalPeriodDays && m.withdrawalPeriodDays > 0)
@@ -111,11 +116,40 @@ export const Level2SupervisorDesk: React.FC<Level2SupervisorProps> = ({
         </div>
       </div>
 
-      {/* 3. TOTAL DASHBOARD & ALL 6 PRODUCTION UNITS (EXCEL MIRROR) */}
+      {/* 3. TOTAL DASHBOARD & UNITS PERFORMANCE ROLL-UPS */}
       <div className="space-y-4">
-        <AnimalUnitsDashboard
-          ledgerRows={ledgerRows || []}
-        />
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveRollupTab('FARM')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+              activeRollupTab === 'FARM'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Wheat className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Livestock Units (A through F)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveRollupTab('TRANSPORT')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+              activeRollupTab === 'TRANSPORT'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Truck className="w-3.5 h-3.5 text-blue-400" />
+            <span>Fleet & Vehicles Performance (Buses, Trikes, Bikes)</span>
+          </button>
+        </div>
+
+        {activeRollupTab === 'FARM' ? (
+          <AnimalUnitsDashboard ledgerRows={ledgerRows || []} />
+        ) : (
+          <TransportUnitsDashboard vehicleRows={vehicleRows || []} />
+        )}
       </div>
 
       {/* 4. FOUR ALERT CARDS WITH DETAILS */}

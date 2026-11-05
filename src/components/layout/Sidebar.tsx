@@ -16,7 +16,8 @@ import {
   Building2,
   ChevronRight,
   ClipboardList,
-  X
+  X,
+  RotateCcw
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,6 +29,7 @@ interface SidebarProps {
   alertCount?: number;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  onResetDemo?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -39,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   alertCount = 0,
   isOpenMobile = false,
   onCloseMobile,
+  onResetDemo,
 }) => {
   const currentRole = userSession.role;
 
@@ -304,6 +307,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
             <span className="text-[10px] text-slate-400 font-mono">BMS v2.0</span>
           </div>
+
+          {onResetDemo && (
+            <button
+              onClick={onResetDemo}
+              title="Reset state to initial demo defaults"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs transition-all shadow-xs cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Reset to Defaults</span>
+            </button>
+          )}
 
           <button
             onClick={onLogout}

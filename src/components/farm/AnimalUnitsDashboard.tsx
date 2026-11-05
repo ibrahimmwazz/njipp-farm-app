@@ -14,7 +14,8 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import { AnimalProductionLedgerRow, AnimalProductionUnitCode } from '@/types';
 
@@ -132,6 +133,58 @@ export const AnimalUnitsDashboard: React.FC<AnimalUnitsDashboardProps> = ({
     };
   });
 
+  const handleExportCSV = () => {
+    const headers = [
+      'Unit Code',
+      'Unit Name',
+      'Departmental Group / Products',
+      'Purpose',
+      'Live Count (Head)',
+      'Casualties (Head)',
+      'Cost per Head (NGN)',
+      'Transportation Cost (NGN)',
+      'Feeding Cost (NGN)',
+      'Medication Cost (NGN)',
+      'Salaries (NGN)',
+      'Other Expenses (NGN)',
+      'Total Unit Cost (NGN/Head)',
+      'Total Expenses (NGN)',
+      'Total Income / Revenue (NGN)',
+      'Net Profit / Loss (NGN)'
+    ];
+
+    const rowsData = ledgerRows.map((r) => [
+      `"${r.unitCode}"`,
+      `"${r.unitName}"`,
+      `"${r.breedOrProduct}"`,
+      `"${r.purpose}"`,
+      r.liveCount,
+      r.casualties,
+      r.costPerHead,
+      r.transportationCost,
+      r.feedingCost,
+      r.medicationCost,
+      r.salaries,
+      r.otherExpenses,
+      r.totalUnitCost,
+      r.totalExpenses,
+      r.totalIncomeRevenue,
+      r.netProfitLoss
+    ]);
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rowsData.map((e) => e.join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `NJIPP_Animal_Production_Ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8">
       
@@ -158,15 +211,28 @@ export const AnimalUnitsDashboard: React.FC<AnimalUnitsDashboardProps> = ({
               </p>
             </div>
 
-            {onOpenLedgerTab && (
+            <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
               <button
-                onClick={onOpenLedgerTab}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer self-start md:self-auto"
+                type="button"
+                onClick={handleExportCSV}
+                className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-white/20 shadow-xs cursor-pointer"
+                title="Download 25-row financial ledger spreadsheet (.csv)"
               >
-                <span>View Full 25-Row Excel Ledger</span>
-                <ArrowRight className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Export Ledger (CSV)</span>
               </button>
-            )}
+
+              {onOpenLedgerTab && (
+                <button
+                  type="button"
+                  onClick={onOpenLedgerTab}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+                >
+                  <span>View Full 25-Row Excel Ledger</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Core Key Figures (Total Headcount, Expenses, Revenue, Net Profit) */}
